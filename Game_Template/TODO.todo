@@ -1,2 +1,5 @@
 Known bugs:
     [] Button rect is not centered with text (AKA. button.x + button.x/2 or button.x - button.x/2)
+
+Enhancements:
+    [] Add multithreading to delay spritesheet texture changes and etc.

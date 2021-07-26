@@ -31,7 +31,6 @@ void load_spritesheet(HANDLE hConsole, WORD saved_attributes, SDL_Window * win, 
 void load_spritesheet(SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet);
 #endif
 
-
 #if __WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -64,48 +63,35 @@ int main(void){
                                        SDL_WINDOWPOS_CENTERED,
                                        SDL_WINDOWPOS_CENTERED,
                                        WINDOW_WIDTH, WINDOW_HEIGHT,0);
-    #if __WIN32
-    check(hConsole, saved_attributes, win, "Failed creating window", "Successfully created window");
-    #else
     check(win, "Failed creating window", "Successfully created window");
-    #endif
 
     // create a renderer, which sets up the graphics hardware
     Uint32 render_flags = SDL_RENDERER_ACCELERATED;
     SDL_Renderer* rend = SDL_CreateRenderer(win, -1, render_flags);
-    #if __WIN32
-    check(hConsole, saved_attributes, rend, "Failed creating renderer", "Successfully created renderer");
-    #else
     check(rend, "Failed creating renderer", "Successfully created renderer");
-    #endif
+    check(rend, "Failed creating renderer", "Successfully created renderer");
     if(SDL_SetRenderDrawBlendMode(rend, SDL_BLENDMODE_BLEND) != 0){
-        #if __WIN32
-        err(hConsole, saved_attributes, "Failed setting render blend mode");
-        #else
         err("Failed setting render blend mode");
-        #endif
     }
 
     // load the image into memory
     SDL_Texture * texture;
-    #if __WIN32
-    image_load(hConsole, saved_attributes, texture, "resources/image.png", rend, win);
-    #else
     image_load(texture, "resources/image.png", rend, win);
-    #endif
 
     // Spritesheets
     Spritesheet sheet;
     sheet.path = "resources/myspritesheet.png";
-    sheet.frames = 8;
+    sheet.hframes = 4;
+    sheet.vframes = 4;
     #if __WIN32
     load_spritesheet(hConsole, saved_attributes, win, rend, &sheet);
     #else
     load_spritesheet(win, rend, &sheet);
     #endif
-    sheet.dest.x = 200;
-    sheet.dest.y = 200;
+    sheet.dest.x = 100;
+    sheet.dest.y = (WINDOW_HEIGHT/2)-sheet.dest.h;
     SDL_RendererFlip flipType = SDL_FLIP_NONE;
+    const int velocity = 15;
 
     // Fonts
     FC_Font* font = FC_CreateFont();
@@ -125,27 +111,17 @@ int main(void){
     while (!close_requested)
     {
         //Start fps timer
-
-        #if __WIN32
-        if ( (startm = clock()) == -1){err(hConsole, saved_attributes, "Failed starting fps timer.");}
-        #else
         if ( (startm = clock()) == -1){err("Failed starting fps timer.");}
-        #endif
+
         // process events
         SDL_Event event;
 
         oldtime = newtime;
         newtime = SDL_GetTicks();
 
-        #if __WIN32
-        if(oldtime == newtime && !paused) {
-            err(hConsole, saved_attributes, "Failed counting fps.\n");
-        }
-        #else
         if(oldtime == newtime && !paused) {
             err("Failed counting fps.\n");
         }
-        #endif
 
         while (SDL_PollEvent(&event))
         {
@@ -157,15 +133,45 @@ int main(void){
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.scancode)
                     {
+                        case SDL_SCANCODE_W:
+                            sheet.src.y = sheet.dest.h;
+                            //SDL_Delay(200);
+                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                sheet.src.x += sheet.dest.w;
+                            }else{sheet.src.x = 0;}
+                            //update_spritesheet(sheet, newtime);
+                            sheet.dest.y -= velocity;
+                            break;
+                        
+                        case SDL_SCANCODE_S:
+                            sheet.src.y = 0;
+                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                sheet.src.x += sheet.dest.w;
+                            }else{sheet.src.x = 0;}
+                            //update_spritesheet(sheet, newtime);
+                            sheet.dest.y += velocity;
+                            break;
+
                         case SDL_SCANCODE_D:
                             //Updating spritesheet
-                            flipType = SDL_FLIP_NONE;
-                            update_spritesheet(sheet, newtime);
+                            //flipType = SDL_FLIP_NONE;
+                            sheet.src.y = (sheet.dest.h*(sheet.vframes-1));
+                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                sheet.src.x += sheet.dest.w;
+                            }else{sheet.src.x = 0;}
+                            //update_spritesheet(sheet, newtime);
+                            sheet.dest.x += velocity;
                             break;
                         
                         case SDL_SCANCODE_A:
-                            flipType = SDL_FLIP_HORIZONTAL;
-                            update_spritesheet(sheet, newtime);
+                            //flipType = SDL_FLIP_HORIZONTAL;
+                            //update_spritesheet(sheet, newtime);
+                            sheet.src.y = (sheet.dest.h*(sheet.vframes-2));
+                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                sheet.src.x += sheet.dest.w;
+                            }else{sheet.src.x = 0;}
+                            sheet.dest.x -= velocity;
+                            break;
 
                         default:
                             break;
@@ -178,7 +184,7 @@ int main(void){
                             if (!paused){paused = 1;}else{paused = 0;}
                             break;
 
-                        case SDL_SCANCODE_F:
+                        case SDL_SCANCODE_F11:
                             ToggleFullscreen(win);
                             break;
 
@@ -199,8 +205,8 @@ int main(void){
                             break;
                     }
                     break;
-            default:
-                break;
+                default:
+                    break;
             }
         }
 
@@ -211,8 +217,9 @@ int main(void){
             SDL_RenderClear(rend);
 
             // draw the image to the window
-            //SDL_RenderCopy(rend, texture, NULL, NULL);
+            SDL_RenderCopy(rend, texture, NULL, NULL);
             SDL_RenderCopyEx(rend, sheet.texture, &sheet.src, &sheet.dest, 0, NULL, flipType);
+            //printf("[%d, %d]\n", sheet.src.x, sheet.src.y);
 
         }else if (!has_focus || paused){
             /* Game has been paused */
@@ -241,11 +248,7 @@ int main(void){
         }
 
         // wait 1/60th of a second
-        #if __WIN32
-        if ( (stopm = clock()) == -1){err(hConsole, saved_attributes, "Failed ending fps timer.");}
-        #else
         if ( (stopm = clock()) == -1){err("Failed ending fps timer.");}
-        #endif
 
         SDL_Delay((1000/FPS)-(((double)stopm-startm)/CLOCKS_PER_SEC));
         FC_Draw(font, rend, 0, 0, "[%.0fFPS]", 1000.0f/(newtime-oldtime));
@@ -332,14 +335,12 @@ int render_button(SDL_Renderer * rend, SDL_Window * win, unsigned int ptsize, un
     button_box.x = x-(button_box.w/3);
     button_box.y = y-(button_box.h/3);
 
-    Vector2 m = get_global_mouse_position(win);
-
     if (text){
         FC_Font * font = FC_CreateFont();
         if (!Ishovering(win, button_box.x, button_box.y, button_box.w, button_box.h)){
             FC_LoadFont(font, rend, "resources/bee.ttf", ptsize, FC_MakeColor(200,200,200,255), TTF_STYLE_NORMAL);
         }else{
-            if (Clicked(win, button_box.x, button_box.y, button_box.w, button_box.h)){
+            if (Clicked(win, button_box.x, button_box.y, button_box.w, button_box.h) == 1){
                 /* Left mouse button clicked */
                 FC_LoadFont(font, rend, "resources/bee.ttf", ptsize, FC_MakeColor(230,0,0,255), TTF_STYLE_NORMAL);
             }else{
@@ -361,19 +362,16 @@ void load_spritesheet(HANDLE hConsole, WORD saved_attributes, SDL_Window * win, 
 #else
 void load_spritesheet(SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet){
 #endif
-    #if __WIN32
-    image_load(hConsole, saved_attributes, sheet->texture, sheet->path, rend, win);
-    #else
     image_load(sheet->texture, sheet->path, rend, win);
-    #endif
     
     SDL_QueryTexture(sheet->texture, NULL, NULL, &sheet->dest.w, &sheet->dest.h);
-    sheet->frames = 8;
-    sheet->dest.w /= sheet->frames;
+    sheet->dest.w /= sheet->hframes;
+    sheet->dest.h /= sheet->vframes;
     //sheet.dest.x = 100;
     //sheet.dest.y = 100;
     
+    sheet->src.x = 0;
+    sheet->src.y = 0;
     sheet->src.h = sheet->dest.h;
     sheet->src.w = sheet->dest.w;
-    sheet->src.y = 0;
 }

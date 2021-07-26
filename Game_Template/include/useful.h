@@ -17,10 +17,8 @@ typedef struct Vector2{
 typedef struct Spritesheet{
     char * path;
     SDL_Texture * texture;
-    unsigned int frames;
-    int w;
-    int h;
-    Uint32 sprite;
+    unsigned int hframes;
+    unsigned int vframes;
     SDL_Rect src;
     SDL_Rect dest;
 } Spritesheet;
@@ -63,32 +61,32 @@ int Clicked(SDL_Window * win, int x, int y, unsigned int width, unsigned int hei
 
 #if __WIN32
 
-#define err(hConsole, saved_attributes, msg, ...){\
+#define err(msg, ...){\
     logs(hConsole, saved_attributes, ERR, msg, ##__VA_ARGS__);\
     logs(hConsole, saved_attributes, ERR, SDL_GetError());\
     /*fprintf(stderr, "[-] Error: [%d, %s()] %s : {%s}\n", __LINE__, __func__, msg, SDL_GetError()); goto end;}*/\
 }
 
-#define check(hConsole, saved_attributes, fn, error, suc){\
+#define check(fn, error, suc){\
     if (!fn){\
-        err(hConsole, saved_attributes, error);\
+        err(error);\
     }else{\
         logs(hConsole, saved_attributes, SUCCESS, suc);\
     }\
 }
 
-#define image_load(hConsole, saved_attributes, tex, path, rend, win){\
+#define image_load(tex, path, rend, win){\
     SDL_Surface* surface = IMG_Load(path); /* load the image into memory using SDL_image library function*/\
     if (!surface)\
     {\
-        err(hConsole, saved_attributes, "Failed creating surface");\
+        err("Failed creating surface");\
         SDL_Quit();\
     }\
     tex = SDL_CreateTextureFromSurface(rend, surface); /* load the image data into the graphics hardware's memory*/\
     SDL_FreeSurface(surface);\
     if (!tex)\
     {\
-        err(hConsole, saved_attributes, "Failed creating texture\n");\
+        err("Failed creating texture\n");\
         SDL_Quit();\
     }\
 }
@@ -129,8 +127,3 @@ int Clicked(SDL_Window * win, int x, int y, unsigned int width, unsigned int hei
 #endif
 
 #define clamp(val, min, max){if (val < min){val = min;}else if (val > max){val = max;}}
-
-#define update_spritesheet(sheet, ticks){\
-    sheet.sprite = (ticks/100) % sheet.frames;\
-    sheet.src.x = sheet.sprite * sheet.dest.w;\
-}
