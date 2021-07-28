@@ -9,6 +9,10 @@ typedef enum {
 	WARN, SUCCESS, ERR, INFO
 } logging;
 
+typedef enum {
+    TILE_DIRT = 0, TILE_GRASS = 1, TILE_ROCKS = 2
+} tileset;
+
 typedef struct Vector2{
     int x;
     int y;

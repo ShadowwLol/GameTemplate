@@ -32,6 +32,13 @@ void load_spritesheet(SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet
 #endif
 
 #if __WIN32
+void map(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend, SDL_Window * win);
+#else
+void map(SDL_Renderer * rend, SDL_Window * win);
+#endif
+
+
+#if __WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
@@ -90,10 +97,6 @@ int main(void){
     #endif
     sheet.dest.x = 100;
     sheet.dest.y = (WINDOW_HEIGHT/2)-(sheet.dest.h/2);
-    sheet.dest.h /= 2;
-    sheet.dest.w /= 2;
-    sheet.src.x /= 2;
-    sheet.src.y /=2;
     SDL_RendererFlip flipType = SDL_FLIP_NONE;
     const int velocity = 15;
 
@@ -228,11 +231,16 @@ int main(void){
             SDL_RenderClear(rend);
 
             // draw the image to the window
-            SDL_Rect r = {camera.x + 0, camera.y + 0, 1280, 720};
-            SDL_RenderCopy(rend, texture, NULL, &r);
+            //SDL_Rect r = {camera.x + 0, camera.y + 0, 1280, 720};
+            //SDL_RenderCopy(rend, texture, NULL, &r);
+            #if __WIN32
+            map(hConsole, saved_attributes, rend, win);
+            #else
+            map(rend, win);
+            #endif
             SDL_RenderCopyEx(rend, sheet.texture, &sheet.src, &sheet.dest, 0, NULL, flipType);
-            printf("Camera : [%d, %d]\n", camera.x, camera.y);
-            printf("Player : [%d, %d]\n", sheet.dest.x, sheet.dest.y);
+            //printf("Camera : [%d, %d]\n", camera.x, camera.y);
+            //printf("Player : [%d, %d]\n", sheet.dest.x, sheet.dest.y);
 
         }else if (!has_focus || paused){
             /* Game has been paused */
@@ -387,4 +395,69 @@ void load_spritesheet(SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet
     sheet->src.y = 0;
     sheet->src.h = sheet->dest.h;
     sheet->src.w = sheet->dest.w;
+}
+
+#if __WIN32
+void map(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend, SDL_Window * win){
+#else
+void map(SDL_Renderer * rend, SDL_Window * win){
+#endif
+    /* An integer 2D array to hold our map each integer representing a 32x32 texture */
+    /* 1280 / 32 = 22.5 = 23 ; 720 / 32 = 40 */
+    int world[23][40] = {
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 2, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 2, 2, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {1, 2, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        {1, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        };
+    SDL_Texture * dirt;
+    image_load(dirt, "resources/dirt.png", rend, win);
+    SDL_Texture * grass;
+    image_load(grass, "resources/grass.png", rend, win);
+    SDL_Texture * rocks;
+    image_load(rocks, "resources/rocks.png", rend, win);
+
+    SDL_Rect dest;
+    dest.w = 32;
+    dest.h = 32;
+    unsigned int row = 0;
+    unsigned int column = 0;
+    for (row = 0; row < 23; row++){
+        for (column = 0; column < 40; column++){
+            dest.x = column * 32;
+            dest.y = row * 32;
+            switch(world[row][column]){
+                case TILE_DIRT:
+                    SDL_RenderCopy(rend, dirt, NULL, &dest);
+                    break;
+                case TILE_GRASS:
+                    SDL_RenderCopy(rend, grass, NULL, &dest);
+                    break;
+                case TILE_ROCKS:
+                    SDL_RenderCopy(rend, rocks, NULL, &dest);
+                    break;
+                default:
+                    break; // log "Undefined map value at world[row][column]"
+            }
+        }
+    }
 }
