@@ -89,9 +89,16 @@ int main(void){
     load_spritesheet(win, rend, &sheet);
     #endif
     sheet.dest.x = 100;
-    sheet.dest.y = (WINDOW_HEIGHT/2)-sheet.dest.h;
+    sheet.dest.y = (WINDOW_HEIGHT/2)-(sheet.dest.h/2);
+    sheet.dest.h /= 2;
+    sheet.dest.w /= 2;
+    sheet.src.x /= 2;
+    sheet.src.y /=2;
     SDL_RendererFlip flipType = SDL_FLIP_NONE;
     const int velocity = 15;
+
+    // Camera
+    SDL_Rect camera;
 
     // Fonts
     FC_Font* font = FC_CreateFont();
@@ -141,6 +148,7 @@ int main(void){
                             }else{sheet.src.x = 0;}
                             //update_spritesheet(sheet, newtime);
                             sheet.dest.y -= velocity;
+                            camera.y += velocity;
                             break;
                         
                         case SDL_SCANCODE_S:
@@ -150,6 +158,7 @@ int main(void){
                             }else{sheet.src.x = 0;}
                             //update_spritesheet(sheet, newtime);
                             sheet.dest.y += velocity;
+                            camera.y -= velocity;
                             break;
 
                         case SDL_SCANCODE_D:
@@ -161,6 +170,7 @@ int main(void){
                             }else{sheet.src.x = 0;}
                             //update_spritesheet(sheet, newtime);
                             sheet.dest.x += velocity;
+                            camera.x -= velocity;
                             break;
                         
                         case SDL_SCANCODE_A:
@@ -171,6 +181,7 @@ int main(void){
                                 sheet.src.x += sheet.dest.w;
                             }else{sheet.src.x = 0;}
                             sheet.dest.x -= velocity;
+                            camera.x += velocity;
                             break;
 
                         default:
@@ -217,9 +228,11 @@ int main(void){
             SDL_RenderClear(rend);
 
             // draw the image to the window
-            SDL_RenderCopy(rend, texture, NULL, NULL);
+            SDL_Rect r = {camera.x + 0, camera.y + 0, 1280, 720};
+            SDL_RenderCopy(rend, texture, NULL, &r);
             SDL_RenderCopyEx(rend, sheet.texture, &sheet.src, &sheet.dest, 0, NULL, flipType);
-            //printf("[%d, %d]\n", sheet.src.x, sheet.src.y);
+            printf("Camera : [%d, %d]\n", camera.x, camera.y);
+            printf("Player : [%d, %d]\n", sheet.dest.x, sheet.dest.y);
 
         }else if (!has_focus || paused){
             /* Game has been paused */

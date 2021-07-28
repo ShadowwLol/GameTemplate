@@ -3,3 +3,5 @@ Known bugs:
 
 Enhancements:
     [] Add multithreading to delay spritesheet texture changes and etc.
+    [] Update all coordinates from the camera's POV
+    [] Don't render anything non-visible.
