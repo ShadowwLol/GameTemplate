@@ -21,22 +21,13 @@
 
 #if __WIN32
 void logs(HANDLE hConsole, WORD saved_attributes, int l, const char * format, ...);
+void load_spritesheet(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend, Spritesheet * sheet);
+void map(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend);
 #else
 void logs(int l, const char * format, ...);
+void load_spritesheet(SDL_Renderer * rend, Spritesheet * sheet);
+void map(SDL_Renderer * rend);
 #endif
-
-#if __WIN32
-void load_spritesheet(HANDLE hConsole, WORD saved_attributes, SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet);
-#else
-void load_spritesheet(SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet);
-#endif
-
-#if __WIN32
-void map(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend, SDL_Window * win);
-#else
-void map(SDL_Renderer * rend, SDL_Window * win);
-#endif
-
 
 #if __WIN32
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
@@ -56,34 +47,46 @@ int main(void){
     // attempt to initialize graphics and timer system
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER) != 0)
     {
-        printf("error initializing SDL: %s\n", SDL_GetError());
-        return 1;
+        log(ERR, "Failed initializing SDL : %s", SDL_GetError());
+        SDL_Quit();
     }else{
-        #if __WIN32
-        logs(hConsole, saved_attributes, SUCCESS, "Successfully initialized SDL");
-        #else
-        logs(SUCCESS, "Successfully initialized SDL");
-        #endif
+        log(SUCCESS, "Successfully initialized SDL");
     }
 
     SDL_Window* win = SDL_CreateWindow(WINDOW_TITLE,
                                        SDL_WINDOWPOS_CENTERED,
                                        SDL_WINDOWPOS_CENTERED,
                                        WINDOW_WIDTH, WINDOW_HEIGHT,0);
-    check(win, "Failed creating window", "Successfully created window");
+    if (!win){
+        log(ERR, "Failed creating window : %s", SDL_GetError());
+        SDL_Quit();
+    }else{
+        log(SUCCESS, "Successfully created window");
+    }
 
     // create a renderer, which sets up the graphics hardware
     Uint32 render_flags = SDL_RENDERER_ACCELERATED;
     SDL_Renderer* rend = SDL_CreateRenderer(win, -1, render_flags);
-    check(rend, "Failed creating renderer", "Successfully created renderer");
-    check(rend, "Failed creating renderer", "Successfully created renderer");
+    if (!rend){
+        log(ERR, "Failed creating renderer : %s", SDL_GetError());
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+    }else{
+        log(SUCCESS, "Successfully created renderer");
+    }
+
     if(SDL_SetRenderDrawBlendMode(rend, SDL_BLENDMODE_BLEND) != 0){
-        err("Failed setting render blend mode");
+        log(ERR, "Failed configuring renderer blend mode : %s", SDL_GetError());
+        SDL_DestroyRenderer(rend);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+    }else{
+        log(SUCCESS, "Successfully configured renderer blend mode");
     }
 
     // load the image into memory
-    SDL_Texture * texture;
-    image_load(texture, "resources/image.png", rend, win);
+    /*SDL_Texture * texture = IMG_LoadTexture(rend, "resources/image.png");
+    */
 
     // Spritesheets
     Spritesheet sheet;
@@ -91,9 +94,9 @@ int main(void){
     sheet.hframes = 4;
     sheet.vframes = 4;
     #if __WIN32
-    load_spritesheet(hConsole, saved_attributes, win, rend, &sheet);
+    load_spritesheet(hConsole, saved_attributes, rend, &sheet);
     #else
-    load_spritesheet(win, rend, &sheet);
+    load_spritesheet(rend, &sheet);
     #endif
     sheet.dest.x = 100;
     sheet.dest.y = (WINDOW_HEIGHT/2)-(sheet.dest.h/2);
@@ -144,47 +147,54 @@ int main(void){
                     switch (event.key.keysym.scancode)
                     {
                         case SDL_SCANCODE_W:
-                            sheet.src.y = sheet.dest.h;
-                            //SDL_Delay(200);
-                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
-                                sheet.src.x += sheet.dest.w;
-                            }else{sheet.src.x = 0;}
-                            //update_spritesheet(sheet, newtime);
-                            sheet.dest.y -= velocity;
-                            camera.y += velocity;
+                            if (!paused){
+                                sheet.src.y = sheet.dest.h;
+                                if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                    sheet.src.x += sheet.dest.w;
+                                }else{sheet.src.x = 0;}
+                                //update_spritesheet(sheet, newtime);
+                                sheet.dest.y -= velocity;
+                                camera.y += velocity;
+                            }
                             break;
                         
                         case SDL_SCANCODE_S:
-                            sheet.src.y = 0;
-                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
-                                sheet.src.x += sheet.dest.w;
-                            }else{sheet.src.x = 0;}
-                            //update_spritesheet(sheet, newtime);
-                            sheet.dest.y += velocity;
-                            camera.y -= velocity;
+                            if (!paused){
+                                sheet.src.y = 0;
+                                if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                    sheet.src.x += sheet.dest.w;
+                                }else{sheet.src.x = 0;}
+                                //update_spritesheet(sheet, newtime);
+                                sheet.dest.y += velocity;
+                                camera.y -= velocity;
+                            }
                             break;
 
                         case SDL_SCANCODE_D:
-                            //Updating spritesheet
-                            //flipType = SDL_FLIP_NONE;
-                            sheet.src.y = (sheet.dest.h*(sheet.vframes-1));
-                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
-                                sheet.src.x += sheet.dest.w;
-                            }else{sheet.src.x = 0;}
-                            //update_spritesheet(sheet, newtime);
-                            sheet.dest.x += velocity;
-                            camera.x -= velocity;
+                            if (!paused){
+                                //Updating spritesheet
+                                //flipType = SDL_FLIP_NONE;
+                                sheet.src.y = (sheet.dest.h*(sheet.vframes-1));
+                                if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                    sheet.src.x += sheet.dest.w;
+                                }else{sheet.src.x = 0;}
+                                //update_spritesheet(sheet, newtime);
+                                sheet.dest.x += velocity;
+                                camera.x -= velocity;
+                            }
                             break;
                         
                         case SDL_SCANCODE_A:
-                            //flipType = SDL_FLIP_HORIZONTAL;
-                            //update_spritesheet(sheet, newtime);
-                            sheet.src.y = (sheet.dest.h*(sheet.vframes-2));
-                            if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
-                                sheet.src.x += sheet.dest.w;
-                            }else{sheet.src.x = 0;}
-                            sheet.dest.x -= velocity;
-                            camera.x += velocity;
+                            if (!paused){
+                                //flipType = SDL_FLIP_HORIZONTAL;
+                                //update_spritesheet(sheet, newtime);
+                                sheet.src.y = (sheet.dest.h*(sheet.vframes-2));
+                                if (sheet.src.x != (sheet.dest.w*(sheet.hframes-1))){
+                                    sheet.src.x += sheet.dest.w;
+                                }else{sheet.src.x = 0;}
+                                sheet.dest.x -= velocity;
+                                camera.x += velocity;
+                            }
                             break;
 
                         default:
@@ -229,14 +239,10 @@ int main(void){
         if (has_focus && !paused){
             // clear the window
             SDL_RenderClear(rend);
-
-            // draw the image to the window
-            //SDL_Rect r = {camera.x + 0, camera.y + 0, 1280, 720};
-            //SDL_RenderCopy(rend, texture, NULL, &r);
             #if __WIN32
-            map(hConsole, saved_attributes, rend, win);
+            map(hConsole, saved_attributes, rend);
             #else
-            map(rend, win);
+            map(rend);
             #endif
             SDL_RenderCopyEx(rend, sheet.texture, &sheet.src, &sheet.dest, 0, NULL, flipType);
             //printf("Camera : [%d, %d]\n", camera.x, camera.y);
@@ -244,22 +250,15 @@ int main(void){
 
         }else if (!has_focus || paused){
             /* Game has been paused */
+            SDL_SetRenderDrawColor(rend, 20, 20, 20, 255);
+            SDL_RenderClear(rend);
+            SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
             SDL_Rect pause_box;
             pause_box.h = WINDOW_HEIGHT;
             pause_box.w = (WINDOW_WIDTH/3.4);
             pause_box.x = 0;
             pause_box.y = 0;
-            SDL_Rect pause_bg;
-            pause_bg.h = WINDOW_HEIGHT;
-            pause_bg.w = WINDOW_WIDTH-(WINDOW_WIDTH/3.4);
-            pause_bg.x = (WINDOW_WIDTH/3.4);
-            pause_bg.y = 0;
-            SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
-            SDL_RenderClear(rend);
-            SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
             SDL_RenderFillRect(rend, &pause_box);
-            SDL_SetRenderDrawColor(rend, 20, 20, 20, 255);
-            SDL_RenderFillRect(rend, &pause_bg);
 
             render_button(rend, win, 25, 100, 50, "Resume");
             if (Clicked(win, 100, 50, 25 * strlen("Resume"), 25 * 2) == 1){paused = 0;}
@@ -279,10 +278,10 @@ int main(void){
 
     // clean up resources before exiting
     printf("Quitting..\n");
-    SDL_DestroyTexture(texture);
+    SDL_DestroyTexture(sheet.texture);
+    FC_FreeFont(font);
     SDL_DestroyRenderer(rend);
     SDL_DestroyWindow(win);
-    FC_FreeFont(font);
     SDL_Quit();
     return EXIT_SUCCESS;
 }
@@ -379,11 +378,11 @@ int render_button(SDL_Renderer * rend, SDL_Window * win, unsigned int ptsize, un
 }
 
 #if __WIN32
-void load_spritesheet(HANDLE hConsole, WORD saved_attributes, SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet){
+void load_spritesheet(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend, Spritesheet * sheet){
 #else
-void load_spritesheet(SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet){
+void load_spritesheet(SDL_Renderer * rend, Spritesheet * sheet){
 #endif
-    image_load(sheet->texture, sheet->path, rend, win);
+    sheet->texture = IMG_LoadTexture(rend, sheet->path);
     
     SDL_QueryTexture(sheet->texture, NULL, NULL, &sheet->dest.w, &sheet->dest.h);
     sheet->dest.w /= sheet->hframes;
@@ -398,14 +397,14 @@ void load_spritesheet(SDL_Window * win, SDL_Renderer * rend, Spritesheet * sheet
 }
 
 #if __WIN32
-void map(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend, SDL_Window * win){
+void map(HANDLE hConsole, WORD saved_attributes, SDL_Renderer * rend){
 #else
-void map(SDL_Renderer * rend, SDL_Window * win){
+void map(SDL_Renderer * rend){
 #endif
     /* An integer 2D array to hold our map each integer representing a 32x32 texture */
     /* 1280 / 32 = 22.5 = 23 ; 720 / 32 = 40 */
-    int world[23][40] = {
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    unsigned int world[23][40] = {
+                        {2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
                         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -429,12 +428,9 @@ void map(SDL_Renderer * rend, SDL_Window * win){
                         {1, 2, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                         {1, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                         };
-    SDL_Texture * dirt;
-    image_load(dirt, "resources/dirt.png", rend, win);
-    SDL_Texture * grass;
-    image_load(grass, "resources/grass.png", rend, win);
-    SDL_Texture * rocks;
-    image_load(rocks, "resources/rocks.png", rend, win);
+    SDL_Texture * dirt = IMG_LoadTexture(rend, "resources/dirt.png");
+    SDL_Texture * grass = IMG_LoadTexture(rend, "resources/grass.png");
+    SDL_Texture * rocks = IMG_LoadTexture(rend, "resources/rocks.png");
 
     SDL_Rect dest;
     dest.w = 32;
@@ -445,19 +441,26 @@ void map(SDL_Renderer * rend, SDL_Window * win){
         for (column = 0; column < 40; column++){
             dest.x = column * 32;
             dest.y = row * 32;
-            switch(world[row][column]){
-                case TILE_DIRT:
-                    SDL_RenderCopy(rend, dirt, NULL, &dest);
-                    break;
-                case TILE_GRASS:
-                    SDL_RenderCopy(rend, grass, NULL, &dest);
-                    break;
-                case TILE_ROCKS:
-                    SDL_RenderCopy(rend, rocks, NULL, &dest);
-                    break;
-                default:
-                    break; // log "Undefined map value at world[row][column]"
+            if ((dest.x+32) > 0 || (dest.x) < WINDOW_WIDTH || (dest.y+32) > 0 || (dest.y) < WINDOW_HEIGHT){
+                /* Only rendering what's visible */
+                switch(world[row][column]){
+                    case TILE_DIRT:
+                        SDL_RenderCopy(rend, dirt, NULL, &dest);
+                        break;
+                    case TILE_GRASS:
+                        SDL_RenderCopy(rend, grass, NULL, &dest);
+                        break;
+                    case TILE_ROCKS:
+                        SDL_RenderCopy(rend, rocks, NULL, &dest);
+                        break;
+                    default:
+                        log(WARN, "Undefined map value at : world[%d][%d] : {%d}", row, column, world[row][column]);
+                        break; // log "Undefined map value at world[row][column]"
+            }
             }
         }
     }
+    SDL_DestroyTexture(dirt);
+    SDL_DestroyTexture(grass);
+    SDL_DestroyTexture(rocks);
 }
