@@ -1,0 +1,19 @@
+Resolution:
+    [x] When Aspect Ratio is applied mouse.x && mouse.y != screen_obj.x && screen_obj.y
+
+Controller:
+    [x] Passing the controller as an argument to main menu and freeing it where it's not needed
+    [x] Linear interpolation
+
+Fonts:
+    [x] Fix fonts not rendering when fullscreening|resizing|grabbing focus onto the window by recreating them
+
+Animation:
+    [x] Animating without using `lerp` function
+
+Game content:
+    [] Initial customization screen
+    [] Implement 2D camera
+
+Visuals:
+    [] Add vfx to background such as bubbles and kettle
